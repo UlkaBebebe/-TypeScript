@@ -1,0 +1,28 @@
+type Level = 1 | 2| 3| 4
+interface Student {
+    name: string;
+    age: number;
+    level: Level;
+}
+
+function nextLevel(level: Level): Level {
+    switch (level) {
+        case 1: return 2;
+        case 2: return 3;
+        case 3: return 4;
+        case 4: return 4;
+        default: 
+            const exhaustiveCheck: never = level;
+            return exhaustiveCheck;
+    }
+}
+
+const student: Student = {
+    name: "Иван Петров",
+    age: 20,
+    level: 1
+};
+console.log("Текущий уровень:", student.level); 
+student.level = nextLevel(student.level);
+console.log("Следующий уровень:", student.level);
+
