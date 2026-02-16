@@ -1,0 +1,75 @@
+interface OrderItem {
+    calculateTotal(): number;
+}
+
+class ProductItem implements OrderItem {
+    private price: number;
+
+    constructor(price: number) {
+        this.price = price;
+    }
+
+    calculateTotal(): number {
+        return this.price;
+    }
+}
+
+class CompositeOrderItem implements OrderItem {
+    private subItems: OrderItem[];
+
+    constructor(subItems: OrderItem[]) {
+        this.subItems = subItems;
+    }
+
+    calculateTotal(): number {
+        return this.subItems.reduce((total, item) => total + item.calculateTotal(), 0);
+    }
+}
+
+class OrderFactory {
+    static createFromCatalog(items: string[], catalog: any): OrderItem {
+        const orderItems: OrderItem[] = [];
+
+        for (const item of items) {
+            if (!catalog[item]) throw new Error(`Item ${item} not found in catalog`);
+            
+            // Проверяем, является ли товар простым продуктом или составным
+            if (Array.isArray(catalog[item])) {
+                // Создаем составной элемент заказа
+                const compositeSubItems = catalog[item].map(subItemName => {
+                    if (!catalog[subItemName]) throw new Error(`Sub-item ${subItemName} not found in catalog`);
+                    return new ProductItem(catalog[subItemName]);
+                });
+                orderItems.push(new CompositeOrderItem(compositeSubItems));
+            } else {
+                // Простой продукт
+                orderItems.push(new ProductItem(catalog[item]));
+            }
+        }
+
+        // Возвращаем составной элемент заказа, содержащий все элементы
+        return new CompositeOrderItem(orderItems);
+    }
+}
+
+// Пример каталога товаров в формате JSON
+const catalog = {
+    "apple": 1.0,
+    "banana": 0.5,
+    "fruit_basket": ["apple", "banana"],
+    "water_bottle": 2.0,
+    "snack_pack": ["apple", "water_bottle"]
+};
+
+// Массив выбранных товаров
+const selectedItems = ["fruit_basket", "snack_pack"];
+
+try {
+    // Создаем заказ из выбранного каталога
+    const order = OrderFactory.createFromCatalog(selectedItems, catalog);
+    
+    // Рассчитываем общую стоимость заказа
+    console.log("Total:", order.calculateTotal());
+} catch (error) {
+    console.log(error.message);
+}
