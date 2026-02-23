@@ -1,0 +1,116 @@
+type Currency = "RUB"
+type Money = {amount: number; currency: Currency}
+type InvoiceStatus = "draft" | "issued" | "paid"
+type CustomerType = "individual" | "company"  // Новый тип
+
+type PaymentResult = 
+| {ok: true; paidAt: string}
+| {ok: false; reason: "declined" | "network_error" | "company_only"}  // Добавлена причина
+
+interface Billable {
+    title: string
+    total(): Money
+}
+
+interface PaymentMethod {
+    pay(invoice: any, amount: Money): PaymentResult
+}
+
+abstract class InvoiceLine implements Billable {
+    public readonly title: string 
+
+    protected constructor(title: string, protected readonly qty: number) {
+        this.title = title
+    }
+    protected abstract unitPrice(): Money
+
+    public total(): Money {
+        const price = this.unitPrice()
+        return {amount: price.amount * this.qty, currency: price.currency }
+    }
+}
+
+class LaborLine extends InvoiceLine {
+    constructor(title: string, qtyHours: number, private readonly rubPerHour: number){
+        super(title, qtyHours)      
+    }
+    protected unitPrice(): Money {
+        return {amount: this.rubPerHour, currency: "RUB"}
+    }
+}
+
+class Invoice {
+    private status: InvoiceStatus = "draft"
+    private readonly customerType: CustomerType  // Новое поле
+
+    constructor(
+        public readonly id: string, 
+        private readonly lines: Billable[],
+        customerType: CustomerType = "individual"  // По умолчанию физлицо
+    ){
+        this.customerType = customerType
+    }
+
+    public issue(): void {
+        if (this.status !== "draft") {
+            throw new Error("Can issue only from draft")
+        }
+        this.status = "issued"
+    }
+
+    public markPaid(): void {
+        if (this.status !== "issued") {
+            throw new Error("Can pay only issued Invoice")
+        }
+        this.status = "paid"
+    }
+
+    public getLines(): readonly Billable[] {
+        return this.lines
+    }
+
+    public getStatus(): InvoiceStatus {
+        return this.status
+    }
+
+    public getCustomerType(): CustomerType {  // Новый метод
+        return this.customerType
+    }
+}
+
+class InvoiceCalculator {
+    public sum(lines: readonly Billable[]): Money {
+        return lines.reduce(
+            (acc, line) => ({amount: acc.amount + line.total().amount, currency: "RUB"}),
+            {amount: 0, currency: "RUB"}
+        )
+    }
+}
+
+class CashPayment implements PaymentMethod {
+    public pay(invoice: Invoice, amount: Money): PaymentResult {
+        if (invoice.getStatus() !== "issued") {
+            return {ok: false, reason: "declined"}
+        }
+        return {ok: true, paidAt: new Date().toISOString()}
+    }
+}
+
+class BankTransferPayment implements PaymentMethod {
+    public pay(invoice: Invoice, amount: Money): PaymentResult {
+        
+        if (invoice.getStatus() !== "issued") {
+            return {ok: false, reason: "declined"}
+        }
+
+        if (invoice.getCustomerType() !== "company") {
+            return {ok: false, reason: "company_only"}
+        }
+
+        if (amount.amount <= 0) {
+            return {ok: false, reason: "declined"}
+        }
+
+        return {ok: true, paidAt: new Date().toISOString()}
+    }
+}
