@@ -42,17 +42,17 @@ class OrderFactory {
                 });
                 orderItems.push(new CompositeOrderItem(compositeSubItems));
             } else {
-                // Простой продукт
+              
                 orderItems.push(new ProductItem(catalog[item]));
             }
         }
 
-        // Возвращаем составной элемент заказа, содержащий все элементы
+        
         return new CompositeOrderItem(orderItems);
     }
 }
 
-// Пример каталога товаров в формате JSON
+
 const catalog = {
     "apple": 1.0,
     "banana": 0.5,
@@ -61,14 +61,14 @@ const catalog = {
     "snack_pack": ["apple", "water_bottle"]
 };
 
-// Массив выбранных товаров
+
 const selectedItems = ["fruit_basket", "snack_pack"];
 
 try {
-    // Создаем заказ из выбранного каталога
+  
     const order = OrderFactory.createFromCatalog(selectedItems, catalog);
     
-    // Рассчитываем общую стоимость заказа
+  
     console.log("Total:", order.calculateTotal());
 } catch (error) {
     console.log(error.message);
