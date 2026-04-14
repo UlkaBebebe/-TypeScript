@@ -1,0 +1,178 @@
+class Book {
+    private static _counter = 0
+    
+    public readonly id: number
+    public readonly title: string
+    public readonly author: string
+    public readonly createdAt: Date
+
+    constructor(title: string, author: string) {
+        Book._counter++
+        this.id = Book._counter
+        this.title = title
+        this.author = author
+        this.createdAt = new Date()
+    }
+
+    public getDisplayInfo(): string {
+        return `${this.title} - ${this.author}`
+    }
+    
+    public static resetCounter(): void {
+        Book._counter = 0
+    }
+}
+
+class BookStore {
+    private books: Book[] = []
+
+    public addBook(book: Book): void {
+        this.books.push(book)
+    }
+
+    public getBooks(): readonly Book[] {
+        return this.books
+    }
+    
+    public getCount(): number {
+        return this.books.length
+    }
+    
+    public isDuplicate(title: string, author: string): boolean {
+        return this.books.some(book => 
+            book.title === title && book.author === author
+        )
+    }
+}
+
+class BookApp {
+    private bookInput: HTMLInputElement
+    private authorInput: HTMLInputElement
+    private addButton: HTMLButtonElement
+    private counterSpan: HTMLSpanElement
+    private cardsContainer: HTMLDivElement
+    private errorDiv: HTMLDivElement
+
+    constructor(private store: BookStore) {
+        this.bookInput = this.getElement<HTMLInputElement>("#book")
+        this.authorInput = this.getElement<HTMLInputElement>("#autor")
+        this.addButton = this.getElement<HTMLButtonElement>("#addBtn")
+        this.counterSpan = this.getElement<HTMLSpanElement>("#counter")
+        this.cardsContainer = this.getElement<HTMLDivElement>("#cards")
+        this.errorDiv = this.getElement<HTMLDivElement>("#error")
+        
+        this.addButton.addEventListener("click", () => this.handleAddBook())
+        
+  
+        this.bookInput.addEventListener("input", () => this.clearError())
+        this.authorInput.addEventListener("input", () => this.clearError())
+    }
+    
+    private normalizeString(str: string): string {
+        return str.trim().replace(/\s+/g, ' ')
+    }
+    
+    private showError(message: string): void {
+        this.errorDiv.textContent = message
+        this.errorDiv.style.display = "block"
+        
+        setTimeout(() => {
+            if (this.errorDiv.textContent === message) {
+                this.errorDiv.style.display = "none"
+            }
+        }, 3000)
+    }
+
+    private clearError(): void {
+        this.errorDiv.textContent = ""
+        this.errorDiv.style.display = "none"
+    }
+    
+    private getElement<T extends Element>(selector: string): T {
+        const element = document.querySelector(selector)
+        if (!element) {
+            throw new Error(`Элемент ${selector} не найден`)
+        }
+        return element as T
+    }
+    
+    private render(): void {
+        this.cardsContainer.innerHTML = ""
+        
+        const books = this.store.getBooks()
+        for (const book of books) {
+            const card = this.createBookCard(book)
+            this.cardsContainer.appendChild(card)
+        }
+        
+        this.counterSpan.textContent = String(this.store.getCount())
+    }
+    
+    private createBookCard(book: Book): HTMLDivElement {
+        const card = document.createElement("div")
+        card.className = "card"
+        
+        const idElement = document.createElement("div")
+        idElement.className = "book-id"
+        idElement.textContent = `ID: ${book.id}`
+        
+        const titleElement = document.createElement("div")
+        titleElement.className = "book-title"
+        titleElement.textContent = `${book.title}`
+        
+        const authorElement = document.createElement("div")
+        authorElement.className = "book-author"
+        authorElement.textContent = `${book.author}`
+        
+        
+        card.appendChild(idElement)
+        card.appendChild(titleElement)
+        card.appendChild(authorElement)
+        
+        return card
+    }
+    
+    private capitalizeWords(str: string): string {
+        return str.split(' ').map(word => {
+            if (word.length === 0) return word
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        }).join(' ')
+    }
+    
+    private clearInputs(): void {
+        this.bookInput.value = ""
+        this.authorInput.value = ""
+    }
+    
+    private handleAddBook(): void {
+
+        let title = this.normalizeString(this.bookInput.value)
+        let author = this.normalizeString(this.authorInput.value)
+        
+        if (!title || !author) {
+            this.showError("заполните название книги и имя автора!")
+            return
+        }
+        
+        title = this.capitalizeWords(title)
+        author = this.capitalizeWords(author)
+        
+        if (this.store.isDuplicate(title, author)) {
+            this.showError(`Книга "${title}" автор "${author}" уже существует!`)
+            return
+        }
+        
+        const newBook = new Book(title, author)
+        
+        this.store.addBook(newBook)
+        
+        this.render()
+        
+        this.clearInputs()
+        
+        this.bookInput.focus()
+    }
+}
+
+const bookStore = new BookStore()
+const app = new BookApp(bookStore)
